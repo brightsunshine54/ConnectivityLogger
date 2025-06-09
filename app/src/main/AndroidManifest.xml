@@ -30,7 +30,7 @@
         </activity>
 
         <service
-            android:name="com.filantrop.connectivitylogger.service.NetworkMonitorService"
+            android:name="com.filantrop.connectivitylogger.service.BackgroundService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice|dataSync" />
     </application>

@@ -1,5 +1,6 @@
 package com.filantrop.connectivitylogger.service
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,13 +20,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class NetworkMonitorService : Service() {
+class NetworkMonitorService {
 
-    private lateinit var connectivityManager: ConnectivityManager
+/*    private lateinit var connectivityManager: ConnectivityManager
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
     override fun onCreate() {
-        super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
 
@@ -113,7 +113,7 @@ class NetworkMonitorService : Service() {
         return sdf.format(Date())
     }
 
-    private fun logToFile(message: String) {
+*//*    private fun logToFile(message: String) {
         try {
             val file = File(getExternalFilesDir(null), "network_log.txt")
             Log.d(getTag(), "filepath: ${file.absoluteFile}")
@@ -123,7 +123,7 @@ class NetworkMonitorService : Service() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-    }
+    }*//*
 
     private fun getTag(): String? {
         return this.javaClass.canonicalName
@@ -152,7 +152,6 @@ class NetworkMonitorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        super.onDestroy()
         connectivityManager.unregisterNetworkCallback(networkCallback)
     }
 
@@ -169,5 +168,5 @@ class NetworkMonitorService : Service() {
             val intent = Intent(context, NetworkMonitorService::class.java)
             context.stopService(intent)
         }
-    }
+    }*/
 }

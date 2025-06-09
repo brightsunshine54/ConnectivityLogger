@@ -1,9 +1,6 @@
 package com.filantrop.connectivitylogger
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,158 +9,117 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
-import com.filantrop.connectivitylogger.service.NetworkMonitorService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.filantrop.connectivitylogger.model.MainViewModel
+import com.filantrop.connectivitylogger.service.BackgroundService
+
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            NetworkMonitorApp()
+    private val viewModel by lazy { ViewModelProvider(this).get(MainViewModel::class.java) }
+
+    private var serviceBinder: BackgroundService.ServiceBinder? = null
+
+    private val serviceConnection = object : android.content.ServiceConnection {
+        override fun onServiceConnected(
+            name: android.content.ComponentName?,
+            binder: android.os.IBinder?
+        ) {
+            serviceBinder = binder as BackgroundService.ServiceBinder
+            viewModel.bindService(serviceBinder!!.getService())
+        }
+
+        override fun onServiceDisconnected(name: android.content.ComponentName?) {
+            viewModel.unbindService(serviceBinder)
+            serviceBinder = null
         }
     }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            MaterialTheme { // Use Material Theme for consistent styling
+                ControlSwitch(viewModel)
+            }
+        }
+
+        bindService(
+            Intent(this, BackgroundService::class.java).setAction(ON_BIND),
+            serviceConnection,
+            BIND_AUTO_CREATE
+        )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        unbindService(serviceConnection)
+    }
+
+    companion object {
+        private val TAG = MainActivity::class.java.canonicalName
+        private const val ON_BIND = "ON_BIND"
+    }
+
 }
 
 @Composable
-fun NetworkMonitorApp() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            val snackbarHostState = remember { SnackbarHostState() }
-            val coroutineScope = rememberCoroutineScope()
-            val context = LocalContext.current
-
-            Scaffold(
-                snackbarHost = { SnackbarHost(snackbarHostState) }
-            ) { paddingValues ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    val status = remember { mutableStateOf("Сервис не запущен") }
-
-                    Text(
-                        text = "Статус: ${status.value}",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
-
-                    Button(
-                        onClick = {
-                            if (checkPermissions(context)) {
-                                NetworkMonitorService.startService(context)
-                                status.value = "Сервис запущен"
-                                showSnackbar(
-                                    coroutineScope,
-                                    snackbarHostState,
-                                    "Мониторинг сети запущен"
-                                )
-                            }
-                        },
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        Text("Запустить мониторинг")
-                    }
-
-                    Button(
-                        onClick = {
-                            NetworkMonitorService.stopService(context)
-                            status.value = "Сервис остановлен"
-                            showSnackbar(
-                                coroutineScope,
-                                snackbarHostState,
-                                "Мониторинг сети остановлен"
-                            )
-                        },
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        Text("Остановить мониторинг")
-                    }
-
-                    Button(
-                        onClick = {
-                            showSnackbar(
-                                coroutineScope,
-                                snackbarHostState,
-                                "Лог сохранен в файл network_log.txt"
-                            )
-                        }
-                    ) {
-                        Text("Показать лог")
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun checkPermissions(context: Context): Boolean {
-    val permissions = mutableListOf<String>()
-
-    if (ActivityCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_NETWORK_STATE
-        ) != PackageManager.PERMISSION_GRANTED
+private fun ControlSwitch(mainViewModel: MainViewModel) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        permissions.add(Manifest.permission.ACCESS_NETWORK_STATE)
-    }
+        val serviceRunning by mainViewModel.serviceState.collectAsState()
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
+        Text(
+            text = if (serviceRunning) "Статус: Сервис запущен" else "Статус: Сервис не запущен",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+        Switch(
+            checked = serviceRunning,
+            onCheckedChange = {},
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Button(
+            onClick = {
+                mainViewModel.startStopService(context)
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (!serviceRunning) Color.Green else Color.Red,
+                contentColor = if (!serviceRunning) Color.White else Color.Black
+            ),
         ) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            Text(
+                text = if (serviceRunning) "Остановить" else "Запустить"
+            )
         }
     }
-
-    if (permissions.isNotEmpty()) {
-        ActivityCompat.requestPermissions(
-            context as ComponentActivity,
-            permissions.toTypedArray(),
-            PERMISSION_REQUEST_CODE
-        )
-        return false
-    }
-
-    return true
 }
 
-private fun showSnackbar(
-    coroutineScope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
-    message: String
-) {
-    coroutineScope.launch {
-        snackbarHostState.showSnackbar(message)
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewNetworkMonitorApp() {
-    NetworkMonitorApp()
+fun PreviewSwitchWithViewModel() {
+    val viewModel = MainViewModel()
+    MaterialTheme {
+        ControlSwitch(viewModel)
+    }
 }
-
-private const val PERMISSION_REQUEST_CODE = 1001
