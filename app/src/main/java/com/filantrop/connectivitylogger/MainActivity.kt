@@ -25,7 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import com.filantrop.connectivitylogger.model.ConnectivityViewModel
 import com.filantrop.connectivitylogger.service.ConnectivityLoggerService
+import com.filantrop.connectivitylogger.service.LOG_FILE_NAME
 import com.filantrop.connectivitylogger.ui.theme.ConnectivityLoggerTheme
+import com.filantrop.connectivitylogger.utils.FileSharingHelper.shareFile
+import java.io.File
 
 
 class MainActivity : ComponentActivity() {
@@ -35,8 +38,7 @@ class MainActivity : ComponentActivity() {
 
     private val serviceConnection = object : android.content.ServiceConnection {
         override fun onServiceConnected(
-            name: android.content.ComponentName?,
-            binder: android.os.IBinder?
+            name: android.content.ComponentName?, binder: android.os.IBinder?
         ) {
             serviceBinder = binder as ConnectivityLoggerService.ServiceBinder
             viewModel.bindService(serviceBinder!!.getService())
@@ -52,7 +54,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            ConnectivityLoggerTheme { // Use Material Theme for consistent styling
+            ConnectivityLoggerTheme {
                 ControlSwitch(viewModel)
             }
         }
@@ -74,11 +76,12 @@ class MainActivity : ComponentActivity() {
         private val TAG = MainActivity::class.java.canonicalName
         private const val ON_BIND = "ON_BIND"
     }
-
 }
 
 @Composable
-private fun ControlSwitch(connectivityViewModel: ConnectivityViewModel) {
+private fun ControlSwitch(
+    connectivityViewModel: ConnectivityViewModel
+) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -103,6 +106,7 @@ private fun ControlSwitch(connectivityViewModel: ConnectivityViewModel) {
             onClick = {
                 connectivityViewModel.startStopService(context)
             },
+            modifier = Modifier.padding(bottom = 16.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (!serviceRunning) Color.Green else Color.Red,
                 contentColor = if (!serviceRunning) Color.White else Color.Black
@@ -111,6 +115,18 @@ private fun ControlSwitch(connectivityViewModel: ConnectivityViewModel) {
             Text(
                 text = if (serviceRunning) "Stop" else "Start",
                 style = MaterialTheme.typography.headlineSmall
+            )
+        }
+
+        val file = File(context.filesDir, LOG_FILE_NAME)
+        val isFileExist = file.exists()
+        Button(
+            onClick = {
+                shareFile(context, file)
+            }, enabled = isFileExist, modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = "Share log file", style = MaterialTheme.typography.headlineSmall
             )
         }
     }

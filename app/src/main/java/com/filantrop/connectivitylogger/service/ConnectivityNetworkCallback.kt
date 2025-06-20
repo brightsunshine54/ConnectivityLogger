@@ -18,7 +18,7 @@ import java.util.Locale
 private const val AVAILABLE = "available"
 private const val LOST = "lost"
 private const val CHANGED = "changed"
-private const val LOG_FILE_NAME = "network_log.txt"
+const val LOG_FILE_NAME = "network_log.txt"
 
 class ConnectivityNetworkCallback(
     private val connectivityManager: ConnectivityManager,
