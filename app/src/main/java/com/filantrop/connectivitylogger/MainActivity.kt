@@ -23,21 +23,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
-import com.filantrop.connectivitylogger.model.MainViewModel
-import com.filantrop.connectivitylogger.service.BackgroundService
+import com.filantrop.connectivitylogger.model.ConnectivityViewModel
+import com.filantrop.connectivitylogger.service.ConnectivityLoggerService
+import com.filantrop.connectivitylogger.ui.theme.ConnectivityLoggerTheme
 
 
 class MainActivity : ComponentActivity() {
-    private val viewModel by lazy { ViewModelProvider(this).get(MainViewModel::class.java) }
+    private val viewModel by lazy { ViewModelProvider(this).get(ConnectivityViewModel::class.java) }
 
-    private var serviceBinder: BackgroundService.ServiceBinder? = null
+    private var serviceBinder: ConnectivityLoggerService.ServiceBinder? = null
 
     private val serviceConnection = object : android.content.ServiceConnection {
         override fun onServiceConnected(
             name: android.content.ComponentName?,
             binder: android.os.IBinder?
         ) {
-            serviceBinder = binder as BackgroundService.ServiceBinder
+            serviceBinder = binder as ConnectivityLoggerService.ServiceBinder
             viewModel.bindService(serviceBinder!!.getService())
         }
 
@@ -51,13 +52,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            MaterialTheme { // Use Material Theme for consistent styling
+            ConnectivityLoggerTheme { // Use Material Theme for consistent styling
                 ControlSwitch(viewModel)
             }
         }
 
         bindService(
-            Intent(this, BackgroundService::class.java).setAction(ON_BIND),
+            Intent(this, ConnectivityLoggerService::class.java).setAction(ON_BIND),
             serviceConnection,
             BIND_AUTO_CREATE
         )
@@ -77,7 +78,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ControlSwitch(mainViewModel: MainViewModel) {
+private fun ControlSwitch(connectivityViewModel: ConnectivityViewModel) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -86,10 +87,10 @@ private fun ControlSwitch(mainViewModel: MainViewModel) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val serviceRunning by mainViewModel.serviceState.collectAsState()
+        val serviceRunning by connectivityViewModel.serviceState.collectAsState()
 
         Text(
-            text = if (serviceRunning) "Статус: Сервис запущен" else "Статус: Сервис не запущен",
+            text = if (serviceRunning) "Service running" else "Service not running",
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 24.dp)
         )
@@ -100,7 +101,7 @@ private fun ControlSwitch(mainViewModel: MainViewModel) {
         )
         Button(
             onClick = {
-                mainViewModel.startStopService(context)
+                connectivityViewModel.startStopService(context)
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (!serviceRunning) Color.Green else Color.Red,
@@ -108,7 +109,8 @@ private fun ControlSwitch(mainViewModel: MainViewModel) {
             ),
         ) {
             Text(
-                text = if (serviceRunning) "Остановить" else "Запустить"
+                text = if (serviceRunning) "Stop" else "Start",
+                style = MaterialTheme.typography.headlineSmall
             )
         }
     }
@@ -118,8 +120,8 @@ private fun ControlSwitch(mainViewModel: MainViewModel) {
 @Preview(showBackground = true)
 @Composable
 fun PreviewSwitchWithViewModel() {
-    val viewModel = MainViewModel()
-    MaterialTheme {
+    val viewModel = ConnectivityViewModel()
+    ConnectivityLoggerTheme {
         ControlSwitch(viewModel)
     }
 }

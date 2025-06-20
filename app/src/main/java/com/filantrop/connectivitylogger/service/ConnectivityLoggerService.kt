@@ -4,28 +4,29 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
-class BackgroundService : Service() {
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor();
+class ConnectivityLoggerService : Service() {
+    private lateinit var connectivityManager: ConnectivityManager
+    private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
     private val binder: IBinder = ServiceBinder()
 
     inner class ServiceBinder : Binder() {
-
-        fun getService(): BackgroundService {
-            return this@BackgroundService
+        fun getService(): ConnectivityLoggerService {
+            return this@ConnectivityLoggerService
         }
     }
 
     private val _running = MutableLiveData(false)
+
     val running: MutableLiveData<Boolean> get() = _running
 
     override fun onBind(intent: Intent): IBinder {
@@ -43,13 +44,14 @@ class BackgroundService : Service() {
         super.onRebind(intent)
     }
 
-    override fun onDestroy() {
-        Log.i(TAG, "onDestroy: ")
-    }
-
     override fun onCreate() {
         Log.i(TAG, "onCreate: ")
-        super.onCreate()
+        createNotificationChannel()
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    override fun onDestroy() {
+        Log.i(TAG, "onDestroy: ")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -65,7 +67,7 @@ class BackgroundService : Service() {
 
             ACTION_STOP -> {
                 stopBackgroundWork()
-                stopForeground(true)
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
         }
@@ -73,7 +75,6 @@ class BackgroundService : Service() {
     }
 
     private fun startForeground() {
-        createNotificationChannel()
         val notification = createNotification()
         startForeground(NOTIFICATION_ID, notification)
     }
@@ -98,25 +99,32 @@ class BackgroundService : Service() {
 
     private fun startBackgroundWork() {
         running.value = true
-        executor.submit {
-            var count = 0
-            while (running.value == true) {
-                Log.i(
-                    TAG,
-                    "onStartCommand: working... ${count++} Thread.id: ${Thread.currentThread().id}"
-                )
-                Thread.sleep(1000)
-            }
-        }
+
+        registerNetworkCallback()
     }
 
     private fun stopBackgroundWork() {
         running.value = false
+
+        unregisterNetworkCallback()
+    }
+
+    private fun unregisterNetworkCallback() {
+        connectivityManager.unregisterNetworkCallback(networkCallback)
+    }
+
+    private fun registerNetworkCallback() {
+        networkCallback = ConnectivityNetworkCallback(connectivityManager, applicationContext)
+
+        connectivityManager.registerNetworkCallback(
+            ConnectivityNetworkCallback.createNetworkRequest(),
+            networkCallback
+        )
     }
 
 
     companion object {
-        private val TAG = BackgroundService::class.java.canonicalName
+        private val TAG = ConnectivityLoggerService::class.java.canonicalName
 
         const val CHANNEL_ID = "BackgroundWorkChannel"
         const val NOTIFICATION_ID = 1

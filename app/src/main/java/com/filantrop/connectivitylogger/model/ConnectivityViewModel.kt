@@ -1,20 +1,20 @@
-package com.filantrop.connectivitylogger.model;
+package com.filantrop.connectivitylogger.model
 
 import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.filantrop.connectivitylogger.service.BackgroundService
+import com.filantrop.connectivitylogger.service.ConnectivityLoggerService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class MainViewModel : ViewModel() {
+class ConnectivityViewModel : ViewModel() {
     private val _serviceState = MutableStateFlow(false)
     val serviceState: StateFlow<Boolean> = _serviceState
 
-    fun bindService(service: BackgroundService) {
+    fun bindService(service: ConnectivityLoggerService) {
         service.running.observeForever { newData ->
             Log.d(TAG, "service.running: ${newData}")
             viewModelScope.launch {
@@ -23,7 +23,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun unbindService(serviceBinder: BackgroundService.ServiceBinder?) {
+    fun unbindService(serviceBinder: ConnectivityLoggerService.ServiceBinder?) {
         if (serviceBinder != null) {
             serviceBinder.getService().running.value = false
         }
@@ -32,7 +32,7 @@ class MainViewModel : ViewModel() {
     fun startService(context: Context) {
         Log.d(TAG, "Requesting service start")
         try {
-            context.startService(getServiceIntent(context, BackgroundService.ACTION_START))
+            context.startService(getServiceIntent(context, ConnectivityLoggerService.ACTION_START))
         } catch (e: Exception) {
             Log.e(TAG, "Error starting service", e)
         }
@@ -41,22 +41,18 @@ class MainViewModel : ViewModel() {
     fun stopService(context: Context) {
         Log.d(TAG, "Requesting service stop")
         try {
-            context.startService(getServiceIntent(context, BackgroundService.ACTION_STOP))
+            context.startService(getServiceIntent(context, ConnectivityLoggerService.ACTION_STOP))
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping service", e)
         }
     }
 
     private fun getServiceIntent(context: Context, action: String): Intent {
-        val intent = Intent(context, BackgroundService::class.java)
+        val intent = Intent(context, ConnectivityLoggerService::class.java)
         intent.action = action
         return intent
     }
 
-
-    override fun onCleared() {
-        super.onCleared()
-    }
 
     fun startStopService(context: Context) {
         Log.d(TAG, "startStopService() Thread.id: ${Thread.currentThread().id}")
@@ -69,6 +65,6 @@ class MainViewModel : ViewModel() {
     }
 
     companion object {
-        private val TAG = MainViewModel::class.java.canonicalName
+        private val TAG = ConnectivityViewModel::class.java.canonicalName
     }
 }
