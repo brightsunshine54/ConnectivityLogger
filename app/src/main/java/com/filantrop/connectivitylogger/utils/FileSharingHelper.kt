@@ -22,7 +22,6 @@ object FileSharingHelper {
             type = getMimeType(file.absolutePath)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             putExtra(Intent.EXTRA_STREAM, contentUri)
-            putExtra(Intent.EXTRA_SUBJECT, "Send a log file")
         }
 
         // Launch the share sheet
