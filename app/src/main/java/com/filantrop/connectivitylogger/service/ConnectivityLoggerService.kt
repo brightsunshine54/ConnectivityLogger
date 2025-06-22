@@ -90,6 +90,7 @@ class ConnectivityLoggerService : Service() {
     }
 
     private fun createNotification(): Notification {
+        // todo: add pending intent to run activity
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Background Work")
             .setContentText("Service is running")
@@ -130,6 +131,7 @@ class ConnectivityLoggerService : Service() {
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
+        const val ON_BIND = "ON_BIND"
     }
 
 }

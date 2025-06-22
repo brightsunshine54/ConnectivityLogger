@@ -18,16 +18,44 @@ import java.util.Locale
 private const val AVAILABLE = "available"
 private const val LOST = "lost"
 private const val CHANGED = "changed"
-const val LOG_FILE_NAME = "network_log.txt"
+const val LOG_FILE_NAME_PATTERN = "network-log_"
 
 class ConnectivityNetworkCallback(
     private val connectivityManager: ConnectivityManager,
-    private val context: Context
+    context: Context
 ) :
     ConnectivityManager.NetworkCallback() {
-    private val simpleDateFormat: SimpleDateFormat =
-        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
+    private val logFile: File = File(
+        context.filesDir,
+        LOG_FILE_NAME_PATTERN + simpleDateFormatFileName.format(Date()) + ".log"
+    )
+
+    companion object {
+        private val TAG = ConnectivityNetworkCallback::class.java.canonicalName
+        private val simpleDateFormat: SimpleDateFormat =
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val simpleDateFormatFileName: SimpleDateFormat =
+            SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
+
+        fun createNetworkRequest(): NetworkRequest {
+            val builder = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
+                .addTransportType(NetworkCapabilities.TRANSPORT_USB)
+                .addTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH)
+                .addTransportType(NetworkCapabilities.TRANSPORT_LOWPAN)
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
+
+            if (SdkExtensions.getExtensionVersion(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) >= 12) {
+                builder.addTransportType(NetworkCapabilities.TRANSPORT_SATELLITE)
+            }
+
+            return builder.build()
+        }
+    }
 
     override fun onAvailable(network: Network) {
         super.onAvailable(network)
@@ -114,7 +142,7 @@ class ConnectivityNetworkCallback(
         hasInternet: Boolean,
         ipAddress: String
     ) =
-        "Network $event! id: $id, type: $connectionType, active: $isActive Internet: $hasInternet, IP: $ipAddress\n"
+        "Network $event! id: $id, type: $connectionType, active: $isActive Internet: $hasInternet, IP: $ipAddress"
 
     private fun getConnectionType(capabilities: NetworkCapabilities) = when {
         capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
@@ -146,10 +174,9 @@ class ConnectivityNetworkCallback(
     }
 
     private fun logToFile(message: String) {
-        val file = File(context.filesDir, LOG_FILE_NAME)
-        Log.d(TAG, "logFile: ${file.absoluteFile} message: $message")
+        Log.d(TAG, "logFile: ${logFile.absoluteFile} message: $message")
         try {
-            FileWriter(file, true).use { writer ->
+            FileWriter(logFile, true).use { writer ->
                 writer.write("[${getCurrentTime()}]: ${message}\n")
             }
         } catch (e: IOException) {
@@ -162,25 +189,4 @@ class ConnectivityNetworkCallback(
         return simpleDateFormat.format(Date())
     }
 
-    companion object {
-        fun createNetworkRequest(): NetworkRequest {
-            val builder = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_USB)
-                .addTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH)
-                .addTransportType(NetworkCapabilities.TRANSPORT_LOWPAN)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
-
-            if (SdkExtensions.getExtensionVersion(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) >= 12) {
-                builder.addTransportType(NetworkCapabilities.TRANSPORT_SATELLITE)
-            }
-
-            return builder.build()
-        }
-
-        private val TAG = ConnectivityNetworkCallback::class.java.canonicalName
-    }
 }
