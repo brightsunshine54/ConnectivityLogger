@@ -1,6 +1,7 @@
 package com.filantrop.connectivitylogger
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -147,6 +148,7 @@ private fun ControlSwitch(
 
 @Composable
 fun FileListScreen(viewModel: ConnectivityViewModel) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -158,14 +160,18 @@ fun FileListScreen(viewModel: ConnectivityViewModel) {
             modifier = Modifier.weight(1f)
         ) {
             items(viewModel.files, key = { it.name }) { file ->
-                FileListItem(file, viewModel)
+                FileListItem(file, viewModel, context)
             }
         }
     }
 }
 
 @Composable
-fun FileListItem(file: ConnectivityViewModel.FileItem, viewModel: ConnectivityViewModel) {
+fun FileListItem(
+    file: ConnectivityViewModel.FileItem,
+    viewModel: ConnectivityViewModel,
+    context: Context
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,6 +191,7 @@ fun FileListItem(file: ConnectivityViewModel.FileItem, viewModel: ConnectivityVi
                             containerColor = SpecialRed
                         ),
                         onClick = {
+                            // todo: add dialog with request for confirmation
                             viewModel.deleteFile(file)
                         }) {
                         Icon(Icons.Default.Delete, "Delete")
@@ -192,7 +199,7 @@ fun FileListItem(file: ConnectivityViewModel.FileItem, viewModel: ConnectivityVi
                     Spacer(modifier = Modifier.weight(1f))
                     Button(
                         onClick = {
-                            FileSharingHelper.shareFile(viewModel.getApplication(), file.file)
+                            FileSharingHelper.shareFile(context, file.file)
                         }) {
                         Icon(Icons.Default.Share, "SHARE")
                     }
@@ -226,7 +233,8 @@ fun PreviewFileListItem() {
                 100L,
                 File("")
             ),
-            viewModel
+            viewModel,
+            LocalContext.current
         )
     }
 }
