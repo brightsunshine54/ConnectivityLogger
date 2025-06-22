@@ -14,10 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -34,18 +38,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import com.filantrop.connectivitylogger.model.ConnectivityViewModel
 import com.filantrop.connectivitylogger.service.ConnectivityLoggerService
-import com.filantrop.connectivitylogger.service.ConnectivityNetworkCallback
-import com.filantrop.connectivitylogger.service.LOG_FILE_NAME_PATTERN
 import com.filantrop.connectivitylogger.ui.theme.ConnectivityLoggerTheme
+import com.filantrop.connectivitylogger.utils.FileSharingHelper
 import java.io.File
-import java.util.Date
+import kotlin.math.floor
+import kotlin.math.log
+import kotlin.math.pow
 
 
 class MainActivity : ComponentActivity() {
     private val viewModel by lazy { ViewModelProvider(this)[ConnectivityViewModel::class.java] }
 
     private var serviceBinder: ConnectivityLoggerService.ServiceBinder? = null
-
     private val serviceConnection = object : android.content.ServiceConnection {
         override fun onServiceConnected(
             name: android.content.ComponentName?, binder: android.os.IBinder?
@@ -136,18 +140,6 @@ private fun ControlSwitch(
                 style = MaterialTheme.typography.headlineSmall
             )
         }
-
-        /*        val file = File(context.filesDir, LOG_FILE_NAME_PATTERN)
-                val isFileExist = file.exists()
-                Button(
-                    onClick = {
-                        shareFile(context, file)
-                    }, enabled = isFileExist, modifier = Modifier.padding(bottom = 16.dp)
-                ) {
-                    Text(
-                        text = "Share log file", style = MaterialTheme.typography.headlineSmall
-                    )
-                }*/
     }
 }
 
@@ -164,14 +156,14 @@ fun FileListScreen(viewModel: ConnectivityViewModel) {
             modifier = Modifier.weight(1f)
         ) {
             items(viewModel.files, key = { it.name }) { file ->
-                FileListItem(file)
+                FileListItem(file, viewModel)
             }
         }
     }
 }
 
 @Composable
-fun FileListItem(file: ConnectivityViewModel.FileItem) {
+fun FileListItem(file: ConnectivityViewModel.FileItem, viewModel: ConnectivityViewModel) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -180,83 +172,59 @@ fun FileListItem(file: ConnectivityViewModel.FileItem) {
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
-/*            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {*/
-                Column {
-                    Text(text = file.name, fontWeight = FontWeight.Bold)
-                    Text(text = "Size: ${file.size / 1024} KB")
-                }
-                Spacer(modifier = Modifier.weight(1f))
-/*                Button(
-                    modifier = Modifier.align(Alignment.End),
+            Column {
+                Text(text = file.name, fontWeight = FontWeight.Bold)
+                Text(text = "Size: ${formatFileSize(file.size)}")
+                Button(
                     onClick = {
-                        //OnDelete(file)
+                        viewModel.deleteFile(file)
                     }) {
                     Icon(Icons.Default.Delete, "Delete")
-                }*/
-            //}
+                }
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Column {
+                Button(
+                    onClick = {
+                        FileSharingHelper.shareFile(viewModel.getApplication(), file.file)
+                    }) {
+                    Icon(Icons.Default.Share, "SHARE")
+                }
+            }
         }
     }
+}
+
+fun formatFileSize(sizeInBytes: Long, decimals: Int = 2): String {
+    if (sizeInBytes <= 0) return "0 B"
+
+    val units = listOf("B", "KB", "MB", "GB", "TB")
+    val base = 1024
+    val exponent = floor(log(sizeInBytes.toDouble(), base.toDouble()))
+    val unitIndex = exponent.coerceAtMost(units.size - 1.0).toInt()
+    val convertedSize = sizeInBytes / base.toDouble().pow(unitIndex)
+
+    val fixedDecimals = if (unitIndex > 0) decimals else 0
+    return "%.${fixedDecimals}f %s".format(convertedSize, units[unitIndex])
 }
 
 @Preview
 @Composable
 fun PreviewFileListItem() {
-    val filename =
-        LOG_FILE_NAME_PATTERN + ConnectivityNetworkCallback.simpleDateFormatFileName.format(Date())
-    val fileItem = ConnectivityViewModel.FileItem(filename, 500L, File(filename))
+    val viewModel = ConnectivityViewModel(Application())
     ConnectivityLoggerTheme {
-        FileListItem(fileItem)
-    }
-}
-/*
-@Composable
-fun OnDelete(file: ConnectivityViewModel.FileItem) {
-    var showDialog by remember { mutableStateOf(false) }
-    var fileName by remember { mutableStateOf("") }
-
-    Button(
-        onClick = { showDialog = true },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text("Add New File")
-    }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Add File") },
-            text = {
-                TextField(
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    label = { Text("File name") }
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onAdd(fileName)
-                        fileName = ""
-                        showDialog = false
-                    }
-                ) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showDialog = false }
-                ) {
-                    Text("Cancel")
-                }
-            }
+        FileListItem(
+            ConnectivityViewModel.FileItem(
+                "network-log_2025-06-23_03-28-16",
+                100L,
+                File("")
+            ),
+            viewModel
         )
     }
-}*/
+}
 
 @Preview(showBackground = true)
 @Composable

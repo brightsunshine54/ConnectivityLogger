@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
-class ConnectivityViewModel(application: Application) ://, files: List<File> = emptyList()) :
+class ConnectivityViewModel(application: Application) :
     AndroidViewModel(application) {
     private val _serviceState = MutableStateFlow(false)
     val serviceState: StateFlow<Boolean> = _serviceState
@@ -54,7 +54,7 @@ class ConnectivityViewModel(application: Application) ://, files: List<File> = e
         }
     }
 
-    fun deleteFile(file: FileItem, context: Context): Boolean {
+    fun deleteFile(file: FileItem): Boolean {
         return try {
             val fileToDelete = file.file
             if (fileToDelete.exists() && fileToDelete.delete()) {
