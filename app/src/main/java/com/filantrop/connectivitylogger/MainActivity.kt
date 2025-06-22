@@ -39,6 +39,8 @@ import androidx.lifecycle.ViewModelProvider
 import com.filantrop.connectivitylogger.model.ConnectivityViewModel
 import com.filantrop.connectivitylogger.service.ConnectivityLoggerService
 import com.filantrop.connectivitylogger.ui.theme.ConnectivityLoggerTheme
+import com.filantrop.connectivitylogger.ui.theme.SpecialGreen
+import com.filantrop.connectivitylogger.ui.theme.SpecialRed
 import com.filantrop.connectivitylogger.utils.FileSharingHelper
 import java.io.File
 import kotlin.math.floor
@@ -131,7 +133,7 @@ private fun ControlSwitch(
             },
             modifier = Modifier.padding(bottom = 16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (!serviceRunning) Color.Green else Color.Red,
+                containerColor = if (!serviceRunning) SpecialGreen else SpecialRed,
                 contentColor = if (!serviceRunning) Color.White else Color.Black
             ),
         ) {
@@ -177,20 +179,23 @@ fun FileListItem(file: ConnectivityViewModel.FileItem, viewModel: ConnectivityVi
             Column {
                 Text(text = file.name, fontWeight = FontWeight.Bold)
                 Text(text = "Size: ${formatFileSize(file.size)}")
-                Button(
-                    onClick = {
-                        viewModel.deleteFile(file)
-                    }) {
-                    Icon(Icons.Default.Delete, "Delete")
-                }
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Column {
-                Button(
-                    onClick = {
-                        FileSharingHelper.shareFile(viewModel.getApplication(), file.file)
-                    }) {
-                    Icon(Icons.Default.Share, "SHARE")
+                Row {
+                    Button(
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SpecialRed
+                        ),
+                        onClick = {
+                            viewModel.deleteFile(file)
+                        }) {
+                        Icon(Icons.Default.Delete, "Delete")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Button(
+                        onClick = {
+                            FileSharingHelper.shareFile(viewModel.getApplication(), file.file)
+                        }) {
+                        Icon(Icons.Default.Share, "SHARE")
+                    }
                 }
             }
         }
